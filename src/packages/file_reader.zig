@@ -26,6 +26,7 @@ pub fn read_file(allocator: std.mem.Allocator, dest: []const u8) !void {
     try findIds(buffer, &id_map, arena_allocator, "id:", 3, '"');
 
     var it_keys = id_map.keyIterator();
+
     while (it_keys.next()) |key| {
         std.debug.print("{s}\n", .{key.*});
     }
