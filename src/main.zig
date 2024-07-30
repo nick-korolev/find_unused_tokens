@@ -1,5 +1,6 @@
 const std = @import("std");
 const file_reader = @import("./packages/file_reader.zig");
+const directory_reader = @import("./packages/directory_reader.zig");
 
 pub fn main() !void {
     const start_time = std.time.milliTimestamp();
@@ -21,5 +22,13 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
 
-    _ = try file_reader.read_file(allocator, "./data/test.tsx");
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const arena_allocator = arena.allocator();
+
+    const files = try directory_reader.read_directory(arena_allocator, "./data");
+
+    for (files.items) |file| {
+        _ = try file_reader.read_file(allocator, file);
+    }
 }
