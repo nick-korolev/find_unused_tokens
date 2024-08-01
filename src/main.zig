@@ -2,6 +2,7 @@ const std = @import("std");
 const file_reader = @import("./packages/file_reader.zig");
 const directory_reader = @import("./packages/directory_reader.zig");
 const json_reader = @import("./packages/json_reader.zig");
+const args_reader = @import("./packages/args_reader.zig");
 
 pub fn main() !void {
     const start_time = std.time.milliTimestamp();
@@ -27,7 +28,12 @@ pub fn main() !void {
     defer arena.deinit();
     const arena_allocator = arena.allocator();
 
-    var source_json = try json_reader.read_json(arena_allocator, "/Users/nick_korolev/Documents/work/StennAppWeb/apps/fcg/src/core/internationalization/en.json");
+    const args = try args_reader.read_args(allocator);
+    defer allocator.free(args.config_path);
+
+    const config_file = try args_reader.read_config(arena_allocator, args.config_path);
+
+    var source_json = try json_reader.read_json(arena_allocator, config_file.source_path);
     defer {
         var it = source_json.iterator();
         while (it.next()) |entry| {
@@ -35,7 +41,7 @@ pub fn main() !void {
         }
     }
 
-    const files = try directory_reader.read_directory(arena_allocator, "/Users/nick_korolev/Documents/work/StennAppWeb/apps/fcg/src");
+    const files = try directory_reader.read_directory(arena_allocator, config_file.target_dir);
 
     for (files.items) |file| {
         _ = try file_reader.read_file(allocator, file, &source_json);
@@ -43,9 +49,22 @@ pub fn main() !void {
 
     var source_json_it = source_json.iterator();
 
-    std.debug.print("Found {any} unused tokens", .{source_json.count()});
+    var counter: i32 = 0;
 
     while (source_json_it.next()) |entry| {
+        const key = entry.key_ptr.*;
+
+        var skip = false;
+        for (config_file.blacklist) |blacklist_item| {
+            if (std.mem.indexOf(u8, key, blacklist_item) != null) {
+                skip = true;
+                break;
+            }
+        }
+
+        if (skip) continue;
+        counter += 1;
         std.debug.print("{s}: {s}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
     }
+    std.debug.print("Found {any} unused tokens", .{counter});
 }
