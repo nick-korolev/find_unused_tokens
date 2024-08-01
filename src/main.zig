@@ -43,6 +43,8 @@ pub fn main() !void {
 
     var source_json_it = source_json.iterator();
 
+    std.debug.print("Found {any} unused tokens", .{source_json.count()});
+
     while (source_json_it.next()) |entry| {
         std.debug.print("{s}: {s}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
     }
