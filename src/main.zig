@@ -3,6 +3,7 @@ const file_reader = @import("./packages/file_reader.zig");
 const directory_reader = @import("./packages/directory_reader.zig");
 const json_reader = @import("./packages/json_reader.zig");
 const args_reader = @import("./packages/args_reader.zig");
+const hash_map_serializer = @import("./packages/hash_map_serializer.zig");
 
 pub fn main() !void {
     const start_time = std.time.milliTimestamp();
@@ -41,6 +42,14 @@ pub fn main() !void {
         }
     }
 
+    var original_json = try source_json.cloneWithAllocator(arena_allocator);
+
+    defer {
+        var it = original_json.iterator();
+        while (it.next()) |entry| {
+            arena_allocator.free(entry.value_ptr.*);
+        }
+    }
     const files = try directory_reader.read_directory(arena_allocator, config_file.target_dir);
 
     for (files.items) |file| {
@@ -64,7 +73,19 @@ pub fn main() !void {
 
         if (skip) continue;
         counter += 1;
-        std.debug.print("{s}: {s}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
+        if (args.fix) {
+            _ = original_json.remove(key);
+        } else {
+            std.debug.print("{s}: {s}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
+        }
     }
-    std.debug.print("Found {any} unused tokens", .{counter});
+    std.debug.print("Found {any} unused tokens\n", .{counter});
+
+    if (args.fix) {
+        const json_str = try hash_map_serializer.serialize_string(original_json, arena_allocator);
+        try std.fs.cwd().writeFile(.{
+            .sub_path = config_file.source_path,
+            .data = json_str,
+        });
+    }
 }

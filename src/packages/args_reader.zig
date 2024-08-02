@@ -3,6 +3,7 @@ const json = std.json;
 
 const Result = struct {
     config_path: []const u8,
+    fix: bool,
 };
 
 const ReadError = error{
@@ -21,9 +22,18 @@ pub fn read_args(allocator: std.mem.Allocator) !Result {
     const config_path = try allocator.dupe(u8, args[1]);
     errdefer allocator.free(config_path);
 
-    return Result{
-        .config_path = config_path,
-    };
+    var fix = false;
+
+    const fix_str: []const u8 = "--fix";
+
+    for (args) |arg| {
+        if (std.mem.eql(u8, arg, fix_str)) {
+            fix = true;
+            continue;
+        }
+    }
+
+    return Result{ .config_path = config_path, .fix = fix };
 }
 
 const Config = struct {
