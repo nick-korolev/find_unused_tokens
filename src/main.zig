@@ -36,16 +36,24 @@ pub fn main() !void {
 
     const files = try directory_reader.read_directory(arena_allocator, config_file.target_dir);
 
-    for (config_file.sources) |source_path| {
-        var source_json = try json_reader.read_json(arena_allocator, source_path);
-        defer {
-            var it = source_json.iterator();
-            while (it.next()) |entry| {
-                arena_allocator.free(entry.value_ptr.*);
-            }
-        }
+    const main_source_path = config_file.sources[0];
 
-        var original_json = try source_json.cloneWithAllocator(arena_allocator);
+    var source_json = try json_reader.read_json(arena_allocator, main_source_path);
+
+    defer {
+        var it = source_json.iterator();
+        while (it.next()) |entry| {
+            arena_allocator.free(entry.value_ptr.*);
+        }
+    }
+
+    for (files.items) |file| {
+        _ = try file_reader.put_unused_keys(allocator, file, &source_json);
+    }
+    var counter: i32 = 0;
+
+    for (config_file.sources) |source_path| {
+        var original_json = try json_reader.read_json(arena_allocator, source_path);
 
         defer {
             var it = original_json.iterator();
@@ -54,13 +62,7 @@ pub fn main() !void {
             }
         }
 
-        for (files.items) |file| {
-            _ = try file_reader.put_unused_keys(allocator, file, &source_json);
-        }
-
         var source_json_it = source_json.iterator();
-
-        var counter: i32 = 0;
 
         while (source_json_it.next()) |entry| {
             const key = entry.key_ptr.*;
@@ -74,16 +76,15 @@ pub fn main() !void {
             }
 
             if (skip) continue;
-            counter += 1;
-            if (args.fix) {
+            if (args.fix == true) {
                 _ = original_json.remove(key);
             } else {
-                std.debug.print("{s}: {s}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
+                std.debug.print("{s}\n", .{key});
             }
+            counter += 1;
         }
-        std.debug.print("Found {any} unused tokens\n", .{counter});
 
-        if (args.fix) {
+        if (args.fix == true) {
             const json_str = try hash_map_serializer.serialize_string(original_json, arena_allocator);
             try std.fs.cwd().writeFile(.{
                 .sub_path = source_path,
@@ -91,4 +92,5 @@ pub fn main() !void {
             });
         }
     }
+    std.debug.print("Found {any} unused tokens (in {any} files) \n", .{ counter, config_file.sources.len });
 }
