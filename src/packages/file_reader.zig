@@ -40,7 +40,6 @@ fn findIds(content: []const u8, id_map: *std.StringHashMap(void), allocator: std
     while (std.mem.indexOfPos(u8, content, start, id_start_pattern)) |id_start| {
         var id_content_start = id_start + id_start_offset;
 
-        // Пропускаем пробелы и переносы строк
         while (id_content_start < content.len and (content[id_content_start] == ' ' or content[id_content_start] == '\n' or content[id_content_start] == '\r')) {
             id_content_start += 1;
         }
