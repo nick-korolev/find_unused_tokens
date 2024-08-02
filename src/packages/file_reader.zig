@@ -2,7 +2,7 @@ const std = @import("std");
 const fs = std.fs;
 const print = std.debug.print;
 
-pub fn read_file(allocator: std.mem.Allocator, dest: []const u8, source: *std.StringHashMap([]const u8)) !void {
+pub fn put_unused_keys(allocator: std.mem.Allocator, dest: []const u8, source: *std.StringHashMap([]const u8)) !void {
     const file = try fs.cwd().openFile(dest, .{});
     defer file.close();
 

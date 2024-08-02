@@ -55,7 +55,7 @@ pub fn main() !void {
         }
 
         for (files.items) |file| {
-            _ = try file_reader.read_file(allocator, file, &source_json);
+            _ = try file_reader.put_unused_keys(allocator, file, &source_json);
         }
 
         var source_json_it = source_json.iterator();
