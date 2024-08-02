@@ -37,7 +37,7 @@ pub fn read_args(allocator: std.mem.Allocator) !Result {
 }
 
 const Config = struct {
-    source_path: []const u8,
+    sources: [][]const u8,
     target_dir: []const u8,
     blacklist: [][]const u8,
 
@@ -47,7 +47,11 @@ const Config = struct {
         for (self.blacklist) |item| {
             allocator.free(item);
         }
+        for (self.other_sources) |item| {
+            allocator.free(item);
+        }
         allocator.free(self.blacklist);
+        allocator.free(self.other_sources);
     }
 };
 
@@ -66,11 +70,7 @@ pub fn read_config(allocator: std.mem.Allocator, config_path: []const u8) !Confi
     const root = parsed.value.object;
 
     var config: Config = undefined;
-    config.source_path = try allocator.dupe(u8, root.get("source_path").?.string);
 
-    if (config.source_path.len == 0) {
-        return ConfigError.SourcePathRequired;
-    }
     config.target_dir = try allocator.dupe(u8, root.get("target_dir").?.string);
 
     if (config.target_dir.len == 0) {
@@ -81,6 +81,12 @@ pub fn read_config(allocator: std.mem.Allocator, config_path: []const u8) !Confi
     config.blacklist = try allocator.alloc([]const u8, blacklist_json.items.len);
     for (blacklist_json.items, 0..) |item, i| {
         config.blacklist[i] = try allocator.dupe(u8, item.string);
+    }
+
+    const sources_json = root.get("sources").?.array;
+    config.sources = try allocator.alloc([]const u8, sources_json.items.len);
+    for (sources_json.items, 0..) |item, i| {
+        config.sources[i] = try allocator.dupe(u8, item.string);
     }
 
     return config;
