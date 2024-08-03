@@ -36,7 +36,7 @@ pub fn read_args(allocator: std.mem.Allocator) !Result {
     return Result{ .config_path = config_path, .fix = fix };
 }
 
-const Config = struct {
+pub const Config = struct {
     sources: [][]const u8,
     target_dir: []const u8,
     blacklist: [][]const u8,

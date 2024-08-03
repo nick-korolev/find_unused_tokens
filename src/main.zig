@@ -4,6 +4,7 @@ const directory_reader = @import("./packages/directory_reader.zig");
 const json_reader = @import("./packages/json_reader.zig");
 const args_reader = @import("./packages/args_reader.zig");
 const hash_map_serializer = @import("./packages/hash_map_serializer.zig");
+const helpers = @import("./packages/helpers.zig");
 
 pub fn main() !void {
     const start_time = std.time.milliTimestamp();
@@ -50,47 +51,6 @@ pub fn main() !void {
     for (files.items) |file| {
         _ = try file_reader.put_unused_keys(allocator, file, &source_json);
     }
-    var counter: i32 = 0;
 
-    for (config_file.sources) |source_path| {
-        var original_json = try json_reader.read_json(arena_allocator, source_path);
-
-        defer {
-            var it = original_json.iterator();
-            while (it.next()) |entry| {
-                arena_allocator.free(entry.value_ptr.*);
-            }
-        }
-
-        var source_json_it = source_json.iterator();
-
-        while (source_json_it.next()) |entry| {
-            const key = entry.key_ptr.*;
-
-            var skip = false;
-            for (config_file.blacklist) |blacklist_item| {
-                if (std.mem.indexOf(u8, key, blacklist_item) != null) {
-                    skip = true;
-                    break;
-                }
-            }
-
-            if (skip) continue;
-            if (args.fix == true) {
-                _ = original_json.remove(key);
-            } else {
-                std.debug.print("{s}\n", .{key});
-            }
-            counter += 1;
-        }
-
-        if (args.fix == true) {
-            const json_str = try hash_map_serializer.serialize_string(original_json, arena_allocator);
-            try std.fs.cwd().writeFile(.{
-                .sub_path = source_path,
-                .data = json_str,
-            });
-        }
-    }
-    std.debug.print("Found {any} unused tokens (in {any} files) \n", .{ counter, config_file.sources.len });
+    try helpers.process_sources(arena_allocator, .{ .config = &config_file, .fix = args.fix, .main_source_json = &source_json });
 }
